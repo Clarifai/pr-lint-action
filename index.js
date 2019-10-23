@@ -37,8 +37,8 @@ Toolkit.run(
     const projects = config.projects.map(project => config.ignore_case ? project.toLowerCase() : project)
     const title_passed = (() => {
       if (config.check_title) {
-        // check the title matches [PROJECT-1234] somewhere
-        if (!projects.some(project => title.match(createWrappedProjectRegex(project)))) {
+        // check the PR title matches PROJECT-1234 somewhere
+        if (!projects.some(project => title.match(createProjectRegex(project)))) {
           tools.log('PR title ' + title + ' does not contain approved project')
           return false
         }
@@ -104,8 +104,4 @@ function findFailedCommits(projects, commitsInPR, ignoreCase) {
 
 function createProjectRegex(project) {
   return new RegExp(project + '[-_]\\d*')
-}
-
-function createWrappedProjectRegex(project) {
-  return new RegExp('\\[' + project + '-\\d*\\]')
 }
