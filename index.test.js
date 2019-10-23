@@ -22,6 +22,7 @@ describe('pr-lint-action', () => {
   
   const good_title_no_brackets = {title: 'PROJ-123 Fixed the issue', ref_name: 'unused'}
   const good_multi_title_no_brackets = {title: 'PROJ-123, PROJ-4321 Fixed all the issues!', ref_name: 'unused'}
+  const good_multi_title_with_brackets = {title: '[PROJ-123, PROJ-4321] Fixed all the issues!', ref_name: 'unused'}
   const bad_title_undefined_project = {title: 'NOPE-123 Introduced more issues', ref_name: 'unused'}
   const good_multi_title_undefined_project = {title: 'PROJ-123, NOPE-123 You win some, you lose some', ref_name: 'unused'}
 
@@ -297,6 +298,20 @@ describe('pr-lint-action', () => {
 
 
     tools.context.payload = pullRequestOpenedFixture(good_multi_title_no_brackets)
+
+    await action(tools)
+    expect(tools.exit.success).toHaveBeenCalled()
+    expect.assertions(1)
+  })
+
+  it('passes if check_title is true and title matches multiple with brackets', async () => {
+    nock('https://api.github.com')
+      .get('/repos/vijaykramesh/pr-lint-action-test/contents/.github/pr-lint.yml')
+      .query(true)
+      .reply(200, configFixture('title.yml'))
+
+
+    tools.context.payload = pullRequestOpenedFixture(good_multi_title_with_brackets)
 
     await action(tools)
     expect(tools.exit.success).toHaveBeenCalled()
