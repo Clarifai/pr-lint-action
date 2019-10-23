@@ -19,6 +19,13 @@ describe('pr-lint-action', () => {
   const good_title_and_bad_branch = { title: '[PROJ-1234] a good PR title', ref_name: 'fix_things' }
   const bad_title_and_good_branch = { title: 'no ticket in me', ref_name: 'bug/PROJ_1234/a_good_branch' }
   const lower_case_good_title_and_branch = { title: '[proj-1234] a lower case good title', ref_name: 'bug/proj_1234/a_good_lowercase_branch' }
+  
+  const good_title_no_brackets = {title: 'PROJ-123 Fixed the issue', ref_name: 'unused'}
+  const good_multi_title_no_brackets = {title: 'PROJ-123, PROJ-4321 Fixed all the issues!', ref_name: 'unused'}
+  const good_multi_title_with_brackets = {title: '[PROJ-123, PROJ-4321] Fixed all the issues!', ref_name: 'unused'}
+  const bad_title_undefined_project = {title: 'NOPE-123 Introduced more issues', ref_name: 'unused'}
+  const good_multi_title_undefined_project = {title: 'PROJ-123, NOPE-123 You win some, you lose some', ref_name: 'unused'}
+
   const good_commits = [
     { commit: { message: "PROJ-1234 Commit 1" } },
     { commit: { message: "PROJ-1234 Commit 2" } },
@@ -268,6 +275,77 @@ describe('pr-lint-action', () => {
     expect(tools.exit.failure).toHaveBeenCalledWith("PR Linting Failed")
     expect.assertions(1)
   })
+
+  it('passes if check_title is true and title matches without brackets', async () => {
+    nock('https://api.github.com')
+      .get('/repos/vijaykramesh/pr-lint-action-test/contents/.github/pr-lint.yml')
+      .query(true)
+      .reply(200, configFixture('title.yml'))
+
+
+    tools.context.payload = pullRequestOpenedFixture(good_title_no_brackets)
+
+    await action(tools)
+    expect(tools.exit.success).toHaveBeenCalled()
+    expect.assertions(1)
+  })
+
+  it('passes if check_title is true and title matches multiple without brackets', async () => {
+    nock('https://api.github.com')
+      .get('/repos/vijaykramesh/pr-lint-action-test/contents/.github/pr-lint.yml')
+      .query(true)
+      .reply(200, configFixture('title.yml'))
+
+
+    tools.context.payload = pullRequestOpenedFixture(good_multi_title_no_brackets)
+
+    await action(tools)
+    expect(tools.exit.success).toHaveBeenCalled()
+    expect.assertions(1)
+  })
+
+  it('passes if check_title is true and title matches multiple with brackets', async () => {
+    nock('https://api.github.com')
+      .get('/repos/vijaykramesh/pr-lint-action-test/contents/.github/pr-lint.yml')
+      .query(true)
+      .reply(200, configFixture('title.yml'))
+
+
+    tools.context.payload = pullRequestOpenedFixture(good_multi_title_with_brackets)
+
+    await action(tools)
+    expect(tools.exit.success).toHaveBeenCalled()
+    expect.assertions(1)
+  })
+  
+  it('fails if check_title is true and title uses undefined project', async () => {
+    nock('https://api.github.com')
+      .get('/repos/vijaykramesh/pr-lint-action-test/contents/.github/pr-lint.yml')
+      .query(true)
+      .reply(200, configFixture('title.yml'))
+
+
+    tools.context.payload = pullRequestOpenedFixture(bad_title_undefined_project)
+
+    await action(tools)
+    expect(tools.exit.failure).toHaveBeenCalledWith("PR Linting Failed")
+    expect.assertions(1)
+  })
+
+  it('passes if check_title is true and has at least one defined project', async () => {
+    nock('https://api.github.com')
+      .get('/repos/vijaykramesh/pr-lint-action-test/contents/.github/pr-lint.yml')
+      .query(true)
+      .reply(200, configFixture('title.yml'))
+
+
+    tools.context.payload = pullRequestOpenedFixture(good_multi_title_undefined_project)
+
+    await action(tools)
+    expect(tools.exit.success).toHaveBeenCalled()
+    expect.assertions(1)
+  })
+  
 })
 
 
