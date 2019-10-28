@@ -5,6 +5,7 @@ const CONFIG_FILENAME = 'pr-lint.yml'
 
 const defaults = {
   projects: ['PROJ'],
+  keywords: [],
   check_title: true,
   check_branch: false,
   check_commits: false,
@@ -34,11 +35,14 @@ Toolkit.run(
       pull_request.head.ref.toLowerCase() :
       pull_request.head.ref
 
-    const projects = config.projects.map(project => config.ignore_case ? project.toLowerCase() : project)
+      const projects = config.projects.map(project => config.ignore_case ? project.toLowerCase() : project)
+      const keywords = config.keywords.map(keywords => config.ignore_case ? keywords.toLowerCase() : keywords)
     const title_passed = (() => {
       if (config.check_title) {
         // check the PR title matches PROJECT-1234 somewhere
-        if (!projects.some(project => title.match(createProjectRegex(project)))) {
+        const isProjectMatch = projects.some(project => title.match(createProjectRegex(project)))
+        const isKeywordMatch = keywords.some(keyword => title.includes(keyword))
+        if (!isProjectMatch && !isKeywordMatch) {
           tools.log('PR title ' + title + ' does not contain approved project')
           return false
         }
@@ -49,7 +53,9 @@ Toolkit.run(
     const branch_passed = (() => {
       // check the branch matches PROJECT-1234 or PROJECT_1234 somewhere
       if (config.check_branch) {
-        if (!projects.some(project => head_branch.match(createProjectRegex(project)))) {
+        const isProjectMatch = projects.some(project => head_branch.match(createProjectRegex(project)))
+        const isKeywordMatch = keywords.some(keyword => head_branch.includes(keyword))
+        if (!isProjectMatch && !isKeywordMatch) {
           tools.log('PR branch ' + head_branch + ' does not contain an approved project')
           return false
         }
@@ -66,7 +72,7 @@ Toolkit.run(
           pull_number: pull_request.number
         }
         const commitsInPR = (await tools.github.pulls.listCommits(listCommitsParams)).data
-        const failedCommits = findFailedCommits(projects, commitsInPR, config.ignore_case);
+        const failedCommits = findFailedCommits(projects, keywords, commitsInPR, config.ignore_case);
 
         if(failedCommits.length) {
           failedCommits.forEach(
@@ -89,15 +95,28 @@ Toolkit.run(
   { event: ['pull_request.opened', 'pull_request.edited', 'pull_request.synchronize'], secrets: ['GITHUB_TOKEN'] }
 )
 
-function findFailedCommits(projects, commitsInPR, ignoreCase) {
+function findFailedCommits(projects, keywords, commitsInPR, ignoreCase) {
   const failedCommits = [];
-  projects.forEach(project => {
-    commitsInPR.forEach(commit => {
-      const commitMessage = ignoreCase ? commit.commit.message.toLowerCase() : commit.commit.message
-      if (!commitMessage.match(createProjectRegex(project))) {
-        failedCommits.push(commitMessage);
+  commitsInPR.forEach(commit => {
+    const commitMessage = ignoreCase ? commit.commit.message.toLowerCase() : commit.commit.message
+
+    for (const project of projects) {
+      const isProjectMatch = commitMessage.match(createProjectRegex(project))
+      
+      if (isProjectMatch) {
+        return;
       }
-    });
+    }
+
+    for (const keyword of keywords) {
+      const isKeywordMatch = commitMessage.includes(keyword)
+      
+      if (isKeywordMatch) {
+        return;
+      }
+    }
+
+    failedCommits.push(commit)
   });
   return failedCommits;
 }
