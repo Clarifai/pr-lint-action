@@ -25,6 +25,7 @@ describe('pr-lint-action', () => {
   const good_multi_title_with_brackets = {title: '[PROJ-123, PROJ-4321] Fixed all the issues!', ref_name: 'unused'}
   const bad_title_undefined_project = {title: 'NOPE-123 Introduced more issues', ref_name: 'unused'}
   const good_multi_title_undefined_project = {title: 'PROJ-123, NOPE-123 You win some, you lose some', ref_name: 'unused'}
+  const good_keyword_title = {title: 'Release: Latest version', ref_name: 'unused'}
 
   const good_commits = [
     { commit: { message: "PROJ-1234 Commit 1" } },
@@ -346,6 +347,19 @@ describe('pr-lint-action', () => {
     expect.assertions(1)
   })
   
+  it('passes if check_title is true and has at least one keyword', async () => {
+    nock('https://api.github.com')
+      .get('/repos/vijaykramesh/pr-lint-action-test/contents/.github/pr-lint.yml')
+      .query(true)
+      .reply(200, configFixture('title.yml'))
+
+
+    tools.context.payload = pullRequestOpenedFixture(good_keyword_title)
+
+    await action(tools)
+    expect(tools.exit.success).toHaveBeenCalled()
+    expect.assertions(1)
+  })
 })
 
 
