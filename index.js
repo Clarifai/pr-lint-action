@@ -39,9 +39,11 @@ Toolkit.run(
       const keywords = config.keywords.map(keywords => config.ignore_case ? keywords.toLowerCase() : keywords)
     const title_passed = (() => {
       if (config.check_title) {
-        // check the title matches [PROJECT-1234] somewhere
-        if (!projects.some(project => title.match(createWrappedProjectRegex(project)))) {
-          tools.log('PR title ' + title + ' does not contain approved project with format [PROJECT-1234]')
+        // check the PR title matches PROJECT-1234 somewhere
+        const isProjectMatch = projects.some(project => title.match(createProjectRegex(project)))
+        const isKeywordMatch = keywords.some(keyword => title.includes(keyword))
+        if (!isProjectMatch && !isKeywordMatch) {
+          tools.log('PR title ' + title + ' does not contain approved project')
           return false
         }
       }
@@ -51,8 +53,10 @@ Toolkit.run(
     const branch_passed = (() => {
       // check the branch matches PROJECT-1234 or PROJECT_1234 somewhere
       if (config.check_branch) {
-        if (!projects.some(project => head_branch.match(createProjectRegex(project)))) {
-          tools.log('PR branch ' + head_branch + ' does not contain an approved project with format PROJECT-1234 or PROJECT_1234')
+        const isProjectMatch = projects.some(project => head_branch.match(createProjectRegex(project)))
+        const isKeywordMatch = keywords.some(keyword => head_branch.includes(keyword))
+        if (!isProjectMatch && !isKeywordMatch) {
+          tools.log('PR branch ' + head_branch + ' does not contain an approved project')
           return false
         }
       }
